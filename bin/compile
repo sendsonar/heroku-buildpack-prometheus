@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# bin/compile <build-dir> <cache-dir>
+
+# Fail fast
+set -e
+set -o pipefail
+
+# Debug
+set -x
+
+# Parse params
+BUILD_DIR=$1
+CACHE_DIR=$2
+ENV_DIR=$3
+
+# Set buildpack dir
+BUILDPACK_DIR=$(cd "$(dirname "$0")"; cd ..; pwd)
+
+# Set pinned version
+PINNED_VERSION="2.30.3"
+
+# If a version hasn't been specified, use the pinned version
+if [ -f "$ENV_DIR/PROMETHEUS_VERSION" ]; then
+  VERSION=$(cat "$ENV_DIR/PROMETHEUS_VERSION")
+else
+  VERSION="$PINNED_VERSION"
+fi
+
+# Download
+if [ ! -f "$CACHE_DIR/prometheus-${VERSION}" ]; then
+  echo "-----> Installing v${VERSION} of Prometheus"
+  wget --quiet -O prometheus.tar.gz https://github.com/prometheus/prometheus/releases/download/v${VERSION}/prometheus-${VERSION}.linux-amd64.tar.gz
+  tar -xzf prometheus.tar.gz
+
+  rm -f "$CACHE_DIR/prometheus-*" || true
+  rm -f "$CACHE_DIR/promtool-*" || true
+  mv prometheus-${VERSION}.linux-amd64/prometheus "$CACHE_DIR/prometheus-${VERSION}"
+else
+  echo "-----> Prometheus v${VERSION} found in cache"
+fi
+
+# Copy binaries
+mkdir -p "$BUILD_DIR/bin"
+cp "$CACHE_DIR/prometheus-${VERSION}" "$BUILD_DIR/bin/prometheus"
+
+# Install the runner
+echo "-----> Installing Prometheus runner"
+mkdir -p "$BUILD_DIR/.profile.d"
+cp "$BUILDPACK_DIR/extra/prometheus.sh" "$BUILD_DIR/.profile.d/"
+chmod +x "$BUILD_DIR/.profile.d/prometheus.sh"
