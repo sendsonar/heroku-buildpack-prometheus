@@ -12,5 +12,5 @@ fi
 if [ -n "$DISABLE_PROMETHEUS" ]; then
   echo "The Prometheus agent has been disabled. Unset the $DISABLE_PROMETHEUS or set missing environment variables."
 else
-  bash -c "prometheus --config.file=\"$APP_PROMETHEUS/config.yml\" 2>&1 &"
+  bash -c "prometheus --log.level=${PROMETHEUS_LOG_LEVEL:=info} --config.file=\"$APP_PROMETHEUS/config.yml\" 2>&1 &"
 fi
